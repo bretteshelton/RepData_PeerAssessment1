@@ -1,0 +1,115 @@
+"Reproducible Research: Peer Assessment 1"
+===========================================
+
+```{r, echo=FALSE,results='hide'}
+library(dplyr); library(lubridate); library(ggplot2)
+```
+
+## Loading and preprocessing the data
+Here we read in the datafile.  
+```{r}
+dataFile <- read.csv("./activity/activity.csv",sep = ",",header = TRUE)
+dataFile$date <- as_date(as.character(dataFile$date))
+```
+
+What is mean total number of steps taken per day?
+
+```{r}
+summarizedByDate <- group_by(dataFile, date)
+
+dailySum <- summarize(summarizedByDate, sum.steps = sum(steps,na.rm = TRUE))
+
+qplot(dailySum$sum.steps)
+
+daily.mean <- mean(summarizedByDate$steps ,na.rm = TRUE)
+daily.median <- median(summarizedByDate$steps,na.rm = TRUE)
+```
+
+The daily mean is `r daily.mean`.
+The daily median is `r daily.median`.
+
+
+## What is the average daily activity pattern?  
+Here we plot the average daily activity pattern.  
+```{r}
+dailyAve <- summarize(summarizedByDate, ave.steps = mean(steps,na.rm = TRUE))
+
+summarizedByInterval <- group_by(dataFile, interval)
+dailyInterval <- summarize(summarizedByInterval, ave.steps = mean(steps,na.rm = T))
+
+intervalPlot <- ggplot(dailyInterval, aes(interval,ave.steps)) + geom_line(color="blue") + geom_hline(aes(yintercept = daily.mean),color="red")
+print(intervalPlot)
+```
+
+This snippet plots the average steps each day over the 2 months, which I'm just keeping here for my own reference (not part of the assignment, and not meant to be used code).  
+y <- ggplot(dailyAve, aes(date,ave.steps)) + geom_line(color="blue")  
+y <- y + geom_hline(aes(yintercept = daily.mean),color="red")  
+print(y)  
+  
+## Largest average daily steps
+This part finds the 5 minumte interval with the largest average daily steps
+which turns out to be interval #835 with 206 steps on average
+```{r}
+maxInterval <- which.max(dailyInterval$ave.steps)
+dailyInterval[maxInterval,]
+```
+
+## Imputing missing values  
+
+My strategy for replacing missing values is to use the 5-minute daily interval mean
+```{r}
+totalMissingData <- sum(is.na(dataFile$steps))
+
+imputedDataFile <- dataFile
+for (i in 1:nrow(dataFile)) {
+  if (is.na(dataFile$steps[i]) == TRUE) {
+    corrInterval <- dataFile$interval[i]
+    corrIndexVal <- which(dailyInterval$interval == corrInterval)
+    imputedDataFile$steps[i] <- dailyInterval$ave.steps[corrIndexVal]
+  }
+}
+
+newMissingData <- sum(is.na(imputedDataFile$steps))
+```
+  
+The total missing data was `r totalMissingData` but now is `r newMissingData`.
+  
+## Historgram of total steps per day
+Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
+```{r}
+imputedSummarizedByDate <- group_by(imputedDataFile, date)
+
+imputedDailySum <- summarize(imputedSummarizedByDate, sum.steps = sum(steps,na.rm = TRUE))
+
+qplot(imputedDailySum$sum.steps)
+
+
+imputedSummarizedByInterval <- group_by(imputedDataFile, interval)
+imputedDailyInterval <- summarize(imputedSummarizedByInterval, ave.steps = mean(steps,na.rm = T))
+
+
+imputed.daily.mean <- mean(imputedDailyInterval$ave.steps,na.rm = TRUE)
+imputed.daily.median <- median(imputedDailyInterval$ave.steps,na.rm = TRUE)
+```
+
+The imputed daily mean is 'r imputed.daily.mean'.
+The imputed daily median is 'r imputed.daily.median'.
+
+## Differences in activity patterns between weekdays and weekends?  
+Here we plot the differences in activity patterns, modeled after the example.
+```{r}
+imputedDataFile$day <- weekdays(imputedDataFile$date)
+
+imputedDataFile$day.category <- "Weekday"
+for (i in 1:nrow(imputedDataFile)) {
+  if (imputedDataFile$day[i] == "Saturday" | imputedDataFile$day[i] == "Sunday")
+    imputedDataFile$day.category[i] <- "Weekend"
+}
+imputedDataFile$day.category <- as.factor(imputedDataFile$day.category)
+imputedSummarizedByIntervalAndDay <- group_by(imputedDataFile, interval, day.category)
+imputedDailyIntervalDay <- summarize(imputedSummarizedByIntervalAndDay, ave.steps = mean(steps,na.rm = T))
+
+
+WeeknamePlot <- ggplot(imputedDailyIntervalDay, aes(interval,ave.steps)) + geom_line(color="blue") + facet_grid(rows = vars(day.category))
+print(WeeknamePlot)
+```
