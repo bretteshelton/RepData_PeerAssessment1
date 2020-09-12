@@ -92,8 +92,8 @@ imputed.daily.mean <- mean(imputedDailyInterval$ave.steps,na.rm = TRUE)
 imputed.daily.median <- median(imputedDailyInterval$ave.steps,na.rm = TRUE)
 ```
 
-The imputed daily mean is 'r imputed.daily.mean'.
-The imputed daily median is 'r imputed.daily.median'.
+The imputed daily mean is `r imputed.daily.mean`.  
+The imputed daily median is `r imputed.daily.median`.
 
 ## Differences in activity patterns between weekdays and weekends?  
 Here we plot the differences in activity patterns, modeled after the example.
